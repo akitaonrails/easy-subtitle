@@ -22,7 +22,7 @@ module EasySubtitle
         check_api_login
         check_tool("mkvmerge", mkvtoolnix_install_help)
         check_tool("mkvextract", mkvtoolnix_install_help)
-        check_tool("alass", alass_install_help)
+        check_alass
 
         puts "\n#{@passed}/#{@total} checks passed"
       end
@@ -86,6 +86,17 @@ module EasySubtitle
           fail("#{name} not found")
           @log.info "  Install: #{install_help}"
         end
+      end
+
+      private def check_alass
+        AlassRunner::BINARY_NAMES.each do |name|
+          if path = Shell.which(name)
+            pass("#{name} found: #{path}")
+            return
+          end
+        end
+        fail("alass not found (tried: #{AlassRunner::BINARY_NAMES.join(", ")})")
+        @log.info "  Install: #{alass_install_help}"
       end
 
       private def detect_platform : String
