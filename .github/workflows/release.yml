@@ -139,3 +139,81 @@ jobs:
             easy-subtitle-linux-x86_64.tar.gz.sha256
             easy-subtitle-macos-arm64.tar.gz
             easy-subtitle-macos-arm64.tar.gz.sha256
+
+  update-homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Get version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Read checksums
+        id: checksums
+        run: |
+          LINUX_SHA=$(awk '{print $1}' easy-subtitle-linux-x86_64.tar.gz.sha256)
+          MACOS_SHA=$(awk '{print $1}' easy-subtitle-macos-arm64.tar.gz.sha256)
+          echo "linux_sha=$LINUX_SHA" >> "$GITHUB_OUTPUT"
+          echo "macos_sha=$MACOS_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: akitaonrails/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Update formula
+        run: |
+          cat > Formula/easy-subtitle.rb << 'FORMULA'
+          class EasySubtitle < Formula
+            desc "Automated subtitle extraction, downloading, and synchronization"
+            homepage "https://github.com/akitaonrails/easy-subtitle"
+            version "VERSION_PLACEHOLDER"
+            license "GPL-3.0-or-later"
+
+            on_macos do
+              on_arm do
+                url "https://github.com/akitaonrails/easy-subtitle/releases/download/v#{version}/easy-subtitle-macos-arm64.tar.gz"
+                sha256 "MACOS_SHA_PLACEHOLDER"
+              end
+            end
+
+            on_linux do
+              on_intel do
+                url "https://github.com/akitaonrails/easy-subtitle/releases/download/v#{version}/easy-subtitle-linux-x86_64.tar.gz"
+                sha256 "LINUX_SHA_PLACEHOLDER"
+              end
+            end
+
+            depends_on "mkvtoolnix"
+
+            def install
+              bin.install "easy-subtitle"
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/easy-subtitle --version")
+            end
+          end
+          FORMULA
+
+          # Replace placeholders with actual values
+          sed -i "s/VERSION_PLACEHOLDER/${{ steps.version.outputs.version }}/" Formula/easy-subtitle.rb
+          sed -i "s/LINUX_SHA_PLACEHOLDER/${{ steps.checksums.outputs.linux_sha }}/" Formula/easy-subtitle.rb
+          sed -i "s/MACOS_SHA_PLACEHOLDER/${{ steps.checksums.outputs.macos_sha }}/" Formula/easy-subtitle.rb
+
+          # Fix indentation (heredoc adds leading spaces)
+          sed -i 's/^          //' Formula/easy-subtitle.rb
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/easy-subtitle.rb
+          git commit -m "easy-subtitle ${{ steps.version.outputs.version }}"
+          git push
