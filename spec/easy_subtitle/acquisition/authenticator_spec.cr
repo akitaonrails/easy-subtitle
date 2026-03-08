@@ -27,6 +27,20 @@ describe EasySubtitle::Authenticator do
     auth.base_url.should eq "https://vip-api.opensubtitles.com/api/v1"
   end
 
+  it "normalizes host-only base_url responses" do
+    config = EasySubtitle::Config.default
+    config.api_key = "test_key"
+    config.username = "testuser"
+    config.password = "testpass"
+
+    WebMock.stub(:post, "https://api.opensubtitles.com/api/v1/login")
+      .to_return(body: %({"token": "jwt_token_abc", "base_url": "vip-api.opensubtitles.com"}))
+
+    auth = EasySubtitle::Authenticator.new(config)
+    auth.login!.should eq "jwt_token_abc"
+    auth.base_url.should eq "https://vip-api.opensubtitles.com/api/v1"
+  end
+
   it "raises on failed login" do
     config = EasySubtitle::Config.default
     config.api_key = "bad_key"
