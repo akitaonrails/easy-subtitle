@@ -16,6 +16,7 @@ module EasySubtitle
         puts "Checking easy-subtitle setup...\n"
 
         check_config_file
+        load_real_config
         check_api_key
         check_credentials
         check_api_login
@@ -33,6 +34,13 @@ module EasySubtitle
           fail("Config file not found: #{@config_path}")
           @log.info "  Run: easy-subtitle init"
         end
+      end
+
+      private def load_real_config
+        return unless File.exists?(@config_path)
+        @config = Config.load(@config_path)
+      rescue ex : ConfigError
+        @log.warn "Config load error: #{ex.message}"
       end
 
       private def check_api_key
