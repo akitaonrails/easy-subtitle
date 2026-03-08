@@ -37,6 +37,7 @@ require "./easy_subtitle/cli/commands/run"
 require "./easy_subtitle/cli/commands/clean"
 require "./easy_subtitle/cli/commands/scan"
 require "./easy_subtitle/cli/commands/hash"
+require "./easy_subtitle/cli/commands/doctor"
 require "./easy_subtitle/cli/app"
 
 EasySubtitle::CLI::App.new.run(ARGV)

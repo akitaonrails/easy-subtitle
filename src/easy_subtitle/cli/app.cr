@@ -35,6 +35,8 @@ module EasySubtitle
           ScanCommand.new(config, log).run(args)
         when "hash"
           HashCommand.new(log).run(args)
+        when "doctor"
+          DoctorCommand.new(config, log).run(args)
         else
           print_help
         end
@@ -101,7 +103,7 @@ module EasySubtitle
       end
 
       private def load_config(command : String?) : Config
-        return Config.default if command == "init" || command == "hash"
+        return Config.default if command == "init" || command == "hash" || command == "doctor"
 
         if File.exists?(@config_path)
           Config.load(@config_path)
@@ -132,6 +134,7 @@ module EasySubtitle
         puts "  clean       Remove ads/watermarks from SRT files"
         puts "  scan        Report subtitle coverage for videos"
         puts "  hash        Compute OpenSubtitles movie hash"
+        puts "  doctor      Check config, credentials, and dependencies"
       end
     end
   end

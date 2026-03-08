@@ -144,6 +144,14 @@ easy-subtitle hash -v /path/to/movie.mkv   # verbose with file size
 
 Computes the OpenSubtitles 64-bit movie hash. Useful for debugging search results.
 
+#### `doctor` — Check setup
+
+```bash
+easy-subtitle doctor
+```
+
+Validates your setup: checks config file, API credentials, tests API login, and verifies external tool dependencies (`mkvmerge`, `mkvextract`, `alass`) are installed. Shows platform-specific install instructions for any missing tools.
+
 ## Configuration
 
 Generate the default config with `easy-subtitle init`, then edit `~/.config/easy-subtitle/config.yml`:
