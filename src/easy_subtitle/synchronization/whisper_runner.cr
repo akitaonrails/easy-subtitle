@@ -1,3 +1,4 @@
+require "digest/sha1"
 require "file_utils"
 
 module EasySubtitle
@@ -5,6 +6,7 @@ module EasySubtitle
     WHISPER_BINARY_NAMES = ["whisper-cli", "whisper", "main"]
     ALASS_BINARY_NAMES   = ["alass", "alass-cli"]
     MODEL_DIR            = Path.home / ".cache" / "easy-subtitle" / "models"
+    REF_DIR              = Path.home / ".cache" / "easy-subtitle" / "whisper-refs"
     MODEL_BASE_URL       = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main"
 
     MODELS = {
@@ -13,6 +15,9 @@ module EasySubtitle
       "medium"   => "ggml-medium.bin",
       "large-v3" => "ggml-large-v3.bin",
     }
+
+    @@ref_mutex = Mutex.new
+    @@ref_cache = Hash(String, Path).new
 
     def initialize(@config : Config, @log : Log, timeout : Time::Span = DEFAULT_TIMEOUT)
       super(@log, timeout)
@@ -31,16 +36,53 @@ module EasySubtitle
     end
 
     def sync(video_path : Path, sub_in : Path, sub_out : Path) : ShellResult
-      whisper_cmd = find_whisper!
       alass_cmd = find_alass!
+
+      ref_srt = ensure_reference_srt(video_path)
+      unless ref_srt
+        return ShellResult.new(stdout: "", stderr: "Whisper did not produce reference SRT", exit_code: 1)
+      end
+
+      # Align downloaded subtitle against Whisper reference via alass
+      @log.debug "Aligning #{sub_in.basename} against Whisper reference"
+      Spinner.run("Aligning #{sub_in.basename} against Whisper reference") do
+        Shell.run(alass_cmd, [
+          ref_srt.to_s, sub_in.to_s, sub_out.to_s,
+        ], raise_on_error: false, timeout: @timeout)
+      end
+    end
+
+    # Generate the Whisper reference SRT once per video. Concurrent fibers
+    # (from smart_sync) wait on the mutex and reuse the cached result.
+    private def ensure_reference_srt(video_path : Path) : Path?
+      video_key = video_path.to_s
+
+      @@ref_mutex.synchronize do
+        if cached = @@ref_cache[video_key]?
+          return cached if File.exists?(cached.to_s)
+        end
+
+        ref_srt = generate_reference_srt(video_path)
+        if ref_srt && File.exists?(ref_srt.to_s)
+          @@ref_cache[video_key] = ref_srt
+          ref_srt
+        end
+      end
+    end
+
+    private def generate_reference_srt(video_path : Path) : Path?
+      whisper_cmd = find_whisper!
       model_path = ensure_model!
 
-      tmp_dir = video_path.parent / ".easy-subtitle-whisper"
-      Dir.mkdir_p(tmp_dir.to_s)
+      Dir.mkdir_p(REF_DIR.to_s)
+      video_hash = Digest::SHA1.hexdigest(video_path.to_s)
+      ref_srt = REF_DIR / "#{video_hash}.srt"
 
-      audio_path = tmp_dir / "audio.wav"
-      ref_base = tmp_dir / "reference"
-      ref_srt = tmp_dir / "reference.srt"
+      # Already generated (e.g. from a previous run)
+      return ref_srt if File.exists?(ref_srt.to_s)
+
+      audio_path = REF_DIR / "#{video_hash}.wav"
+      ref_base = REF_DIR / video_hash
 
       begin
         # Step 1: Extract 16kHz mono WAV from video
@@ -68,19 +110,10 @@ module EasySubtitle
           ], raise_on_error: false, timeout: 30.minutes)
         end
 
-        unless File.exists?(ref_srt.to_s)
-          return ShellResult.new(stdout: "", stderr: "Whisper did not produce reference SRT", exit_code: 1)
-        end
-
-        # Step 3: Align downloaded subtitle against Whisper reference via alass
-        @log.debug "Aligning #{sub_in.basename} against Whisper reference"
-        Spinner.run("Aligning #{sub_in.basename} against Whisper reference") do
-          Shell.run(alass_cmd, [
-            ref_srt.to_s, sub_in.to_s, sub_out.to_s,
-          ], raise_on_error: false, timeout: @timeout)
-        end
+        File.exists?(ref_srt.to_s) ? ref_srt : nil
       ensure
-        FileUtils.rm_rf(tmp_dir.to_s)
+        # Clean up the large WAV file, keep the reference SRT
+        File.delete(audio_path.to_s) if File.exists?(audio_path.to_s)
       end
     end
 
