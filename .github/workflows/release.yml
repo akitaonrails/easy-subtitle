@@ -37,7 +37,7 @@ jobs:
       - name: Build release binary
         run: |
           shards install --production
-          crystal build src/easy_subtitle.cr -o easy-subtitle --release --no-debug --static
+          crystal build src/easy_subtitle.cr -o easy-subtitle --release --no-debug
           strip easy-subtitle
 
       - name: Package

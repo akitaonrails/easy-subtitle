@@ -27,6 +27,23 @@ brew install akitaonrails/tap/easy-subtitle
 curl -fsSL https://raw.githubusercontent.com/akitaonrails/easy-subtitle/master/install.sh | bash
 ```
 
+Linux release binaries are built on Ubuntu and are dynamically linked.
+
+If your system is missing the runtime libraries, install them first:
+
+Ubuntu / Debian:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y zlib1g libyaml-0-2 libssl3
+```
+
+Arch Linux:
+
+```bash
+sudo pacman -S --needed zlib libyaml openssl
+```
+
 ### From GitHub Releases
 
 Download the latest binary for your platform from [Releases](https://github.com/akitaonrails/easy-subtitle/releases), then:
@@ -59,9 +76,7 @@ That is enough for a normal Linux build on Arch.
 
 If you want a fully static Linux binary, you also need static archives for those libraries.
 
-Ubuntu / Debian runners used in GitHub Actions provide those through the `-dev` packages above, so the release workflow can build with `--static`.
-
-Arch is different. On a typical Arch install, `pcre2` ships `.a` files, but `zlib`, `libyaml`, and `openssl` often do not. That means `crystal build --static` can still fail even when the packages above are already installed. On Arch, use a normal non-static local build unless you are prepared to provide those missing static libraries yourself.
+Ubuntu / Debian can provide them through the `-dev` packages above. Arch is different. On a typical Arch install, `pcre2` ships `.a` files, but `zlib`, `libyaml`, and `openssl` often do not. That means `crystal build --static` can still fail even when the packages above are already installed. On Arch, use a normal non-static local build unless you are prepared to provide those missing static libraries yourself.
 
 ```bash
 git clone https://github.com/akitaonrails/easy-subtitle.git
