@@ -207,6 +207,8 @@ easy-subtitle run --skip-extract /path/to/movies
 
 Runs the complete pipeline: **extract → download → sync**. Individual phases can be skipped.
 
+The `run` pipeline is idempotent: it skips download and sync for any language that already has a valid final subtitle (e.g. `video.en.srt`). This avoids wasting OpenSubtitles quota re-downloading candidates when a good subtitle already exists. To force re-processing, use the standalone `download` and `sync` commands with `resync_mode: true`.
+
 #### `clean` — Remove ads/watermarks
 
 ```bash
