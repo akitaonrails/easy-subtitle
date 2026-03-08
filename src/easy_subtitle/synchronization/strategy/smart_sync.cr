@@ -34,7 +34,8 @@ module EasySubtitle
       if accepted.empty?
         drift = results.select(&.status.drift?)
         return best_result(drift) if drift.any?
-        return results.first?
+        return best_result(results) if results.any?
+        return nil
       end
 
       best_result(accepted)
@@ -60,8 +61,8 @@ module EasySubtitle
         candidate_path: candidate,
         output_path: output_path,
         offset: offset,
-        status: SyncStatus::Accepted,
-        alass_output: shell_result.stdout,
+        status: classify_status(shell_result),
+        alass_output: combined_output(shell_result),
       )
     rescue ex : Exception
       SyncResult.new(
@@ -77,9 +78,25 @@ module EasySubtitle
       0.0
     end
 
+    private def classify_status(shell_result : ShellResult) : SyncStatus
+      quality_warning?(shell_result) ? SyncStatus::Drift : SyncStatus::Accepted
+    end
+
+    private def quality_warning?(shell_result : ShellResult) : Bool
+      output = combined_output(shell_result)
+      output.matches?(/\bwarn:/i) || output.matches?(/negative timings?/i)
+    end
+
+    private def combined_output(shell_result : ShellResult) : String
+      [shell_result.stdout, shell_result.stderr]
+        .reject(&.empty?)
+        .join('\n')
+    end
+
     private def best_result(results : Array(SyncResult)) : SyncResult
       results.max_by do |result|
         {
+          status_rank(result.status),
           candidate_download_count(result.candidate_path),
           -result.offset,
         }
@@ -87,10 +104,17 @@ module EasySubtitle
     end
 
     private def candidate_download_count(path : Path) : Int64
-      if match = /\.d(\d+)\./.match(path.basename)
-        match[1].to_i64
+      SubtitleFiles.candidate_download_count(path.basename)
+    end
+
+    private def status_rank(status : SyncStatus) : Int32
+      case status
+      when .accepted?
+        2
+      when .drift?
+        1
       else
-        0_i64
+        0
       end
     end
   end

@@ -6,7 +6,7 @@ module EasySubtitle
     @last_request_at : Time = Time::UNIX_EPOCH
     @mutex : Mutex = Mutex.new
     RATE_LIMIT_MS = 500
-    MAX_REDIRECTS = 5
+    MAX_REDIRECTS =   5
 
     def initialize(@config : Config, @authenticator : Authenticator)
     end

@@ -147,6 +147,13 @@ Uses `alass` to synchronize downloaded subtitle files with the video. Supports t
 - **Smart sync** (default): runs all candidates in parallel, keeps the most-downloaded subtitle that `alass` synchronizes successfully
 - **First match**: stops at the first subtitle that `alass` synchronizes successfully
 
+Successful syncs are classified as either:
+
+- **Accepted**: `alass` completed without warning signals
+- **Drift**: `alass` completed but emitted warnings that suggest the subtitle should be reviewed
+
+When a final `video.lang.srt` already exists, `download`, `sync`, and `run` skip that language unless `resync_mode` is enabled.
+
 #### `run` — Full pipeline
 
 ```bash
@@ -213,6 +220,7 @@ audio_track_languages:
   - ja
 
 # Legacy sync thresholds from Subservient (kept for config compatibility)
+# The current alass-based sync flow no longer rejects successful syncs on this basis.
 accept_offset_threshold: 0.101
 reject_offset_threshold: 2.5
 

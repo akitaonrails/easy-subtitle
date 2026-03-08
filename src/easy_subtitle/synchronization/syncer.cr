@@ -20,9 +20,16 @@ module EasySubtitle
 
       if result && result.output_path
         saved = finalize_result(result, video, language)
-        delete_candidate_files(candidates) if saved || result.status.failed?
+        if saved
+          delete_candidate_files(candidates)
+          cleanup_marked_candidates(video, language)
+        elsif result.failed?
+          mark_candidates(candidates, SyncStatus::Failed)
+        end
       else
-        delete_candidate_files(candidates) if result.nil? || result.status.failed?
+        if result.nil? || result.status.failed?
+          mark_candidates(candidates, SyncStatus::Failed)
+        end
         cleanup_temp_files(video.directory)
       end
 
@@ -38,8 +45,13 @@ module EasySubtitle
 
       if result.accepted? || result.status.drift?
         begin
+          File.delete(final_path.to_s) if File.exists?(final_path.to_s)
           File.rename(output.to_s, final_path.to_s)
-          @log.success "Saved: #{final_name} (timing shift: #{result.offset.round(3)}s, status: #{result.status})"
+          if result.accepted?
+            @log.success "Saved: #{final_name} (timing shift: #{result.offset.round(3)}s, status: #{result.status})"
+          else
+            @log.warn "Saved with review needed: #{final_name} (timing shift: #{result.offset.round(3)}s, status: #{result.status})"
+          end
           cleanup_temp_files(video.directory)
           true
         rescue ex
@@ -59,6 +71,33 @@ module EasySubtitle
       end
     rescue
       # Ignore candidate cleanup errors
+    end
+
+    private def mark_candidates(candidates : Array(Path), status : SyncStatus) : Nil
+      candidates.each do |candidate|
+        next unless File.exists?(candidate.to_s)
+
+        marked_path = SubtitleFiles.mark(candidate, status)
+        if File.exists?(marked_path.to_s)
+          File.delete(candidate.to_s)
+        else
+          File.rename(candidate.to_s, marked_path.to_s)
+        end
+      end
+    rescue
+      # Ignore marker cleanup errors
+    end
+
+    private def cleanup_marked_candidates(video : VideoFile, language : String) : Nil
+      Dir.each_child(video.directory.to_s) do |name|
+        next unless name.starts_with?("#{video.stem}.#{language}.")
+        next unless SubtitleFiles.marked_candidate?(name)
+
+        path = video.directory / name
+        File.delete(path.to_s) if File.file?(path.to_s)
+      end
+    rescue
+      # Ignore marker cleanup errors
     end
 
     private def cleanup_temp_files(dir : Path) : Nil

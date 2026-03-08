@@ -16,7 +16,7 @@ describe EasySubtitle::CLI::App do
     app.should_not be_nil
   end
 
-  it "deletes failed numbered subtitle candidates after sync" do
+  it "marks failed numbered subtitle candidates after sync" do
     dir = Path.new("/tmp/easy-subtitle-sync-cleanup")
     Dir.mkdir_p(dir.to_s)
 
@@ -35,8 +35,8 @@ describe EasySubtitle::CLI::App do
     result = syncer.sync(video, [c1, c2], "en")
     result.should_not be_nil
     result.not_nil!.status.failed?.should be_true
-    File.exists?(c1.to_s).should be_false
-    File.exists?(c2.to_s).should be_false
+    File.exists?((dir / "movie.en.d100.f1.FAILED.srt").to_s).should be_true
+    File.exists?((dir / "movie.en.d200.f2.FAILED.srt").to_s).should be_true
   ensure
     FileUtils.rm_rf(dir.to_s) if dir
   end

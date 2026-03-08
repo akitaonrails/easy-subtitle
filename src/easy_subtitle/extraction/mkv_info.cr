@@ -123,9 +123,9 @@ module EasySubtitle
 
       {
         language: language,
-        name: name,
-        default: default,
-        forced: forced,
+        name:     name,
+        default:  default,
+        forced:   forced,
         codec_id: codec_id,
       }
     end

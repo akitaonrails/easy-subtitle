@@ -25,6 +25,14 @@ module EasySubtitle
       status.accepted?
     end
 
+    def drift? : Bool
+      status.drift?
+    end
+
+    def failed? : Bool
+      status.failed?
+    end
+
     def to_s(io : IO) : Nil
       io << "#{candidate_path.basename}: #{status} (timing shift: #{offset.round(3)}s)"
     end
