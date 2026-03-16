@@ -21,11 +21,13 @@ Subservient is a capable ~10,000-line Python tool with an interactive menu UI, f
 brew install akitaonrails/tap/easy-subtitle
 ```
 
-### Quick install (Linux x86_64)
+### Quick install (Linux x86_64 / arm64, macOS arm64)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/akitaonrails/easy-subtitle/master/install.sh | bash
 ```
+
+The installer auto-detects `x86_64` and `arm64` Linux hosts plus Apple Silicon macOS and downloads the matching release artifact.
 
 Linux release binaries are built as static musl binaries so they can run on both Ubuntu and Arch without extra runtime libraries.
 
@@ -72,7 +74,7 @@ docker run --rm \
   sh -lc 'shards install --production && crystal build src/easy_subtitle.cr -o easy-subtitle --release --no-debug --static'
 ```
 
-That static musl binary is the one intended to be portable across Ubuntu and Arch.
+That static musl binary is the one intended to be portable across Ubuntu and Arch, including arm64 hosts when built from the matching release workflow target.
 
 ```bash
 git clone https://github.com/akitaonrails/easy-subtitle.git
