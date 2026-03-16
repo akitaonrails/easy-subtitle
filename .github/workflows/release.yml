@@ -57,7 +57,7 @@ jobs:
               --volume "$PWD:/work" \
               --workdir /work \
               crystallang/crystal:latest-alpine \
-              sh -lc 'strip easy-subtitle && file easy-subtitle'
+              sh -lc 'strip easy-subtitle'
           else
             strip easy-subtitle
             file easy-subtitle
