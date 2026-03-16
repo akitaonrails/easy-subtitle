@@ -29,7 +29,8 @@ case "$OS" in
   Linux)
     case "$ARCH" in
       x86_64) ASSET="easy-subtitle-linux-x86_64.tar.gz" ;;
-      *) error "Unsupported Linux architecture: $ARCH. Only x86_64 is supported." ;;
+      aarch64|arm64) ASSET="easy-subtitle-linux-arm64.tar.gz" ;;
+      *) error "Unsupported Linux architecture: $ARCH. Only x86_64 and arm64 are supported." ;;
     esac
     ;;
   Darwin)
